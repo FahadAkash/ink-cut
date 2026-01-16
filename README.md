@@ -131,21 +131,64 @@ Before you begin, ensure you have installed:
    cd ..
    ```
 
-3. **Configure environment (Optional)**
-   ```bash
-   cd server
-   cp .env.example .env
-   # Edit .env and add your YOUTUBE_API_KEY
-   ```
+3. **Start the application**
+   - **Modern Full Stack (Browser)**:
+     ```bash
+     npm run dev:full
+     ```
+   - **Desktop App (Recommended)**:
+     ```bash
+     npm run dev:electron
+     ```
 
-4. **Start the application**
-   ```bash
-   npm run dev:full
-   ```
+---
 
-5. **Open your browser**
-   - Frontend: [http://localhost:5173](http://localhost:5173)
-   - Backend API: [http://localhost:3001](http://localhost:3001)
+## 🏗️ Desktop Application
+
+InkCut is now available as a standalone desktop application! This provides enhanced features like local file conversion and native folder selection.
+
+### Build Windows Executable (.exe)
+```bash
+npm run build:win
+```
+The installer will be generated in the `release/` folder.
+
+---
+
+## 🎥 Video Converter
+
+The desktop version includes a powerful multi-file batch converter.
+
+### How to use:
+1. Open the **Converter** tab.
+2. Click the 📂 icon to pick your save folder.
+3. Drag & drop one or multiple video files.
+4. Select target format (MP4, MKV, AVI, MP3, GIF, WebM).
+5. Click **Convert Files** to process the queue in parallel.
+
+---
+
+## 🔧 Configuration
+
+### YouTube API Setup
+
+To enable YouTube search functionality:
+
+1. **Go to Google Cloud Console**
+   - Visit [console.cloud.google.com](https://console.cloud.google.com/)
+
+2. **Enable YouTube Data API v3**
+   - Search for "YouTube Data API v3" and click **Enable**.
+
+3. **Get API Key**
+   - Go to "APIs & Services" → "Credentials" → "Create Credentials" → "API Key".
+
+4. **Add to InkCut**
+   - **For Local Development**: Create `server/.env` and add:
+     ```env
+     YOUTUBE_API_KEY=your_key_here
+     ```
+   - **For Desktop App**: The settings are stored in `%APPDATA%/InkCut/server/.env` after installation.
 
 ---
 
