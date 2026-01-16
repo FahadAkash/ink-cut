@@ -8,6 +8,7 @@ import SketchDecorations from '@/components/SketchDecorations';
 import SketchIcon from '@/components/SketchIcon';
 import InputTabs from '@/components/InputTabs';
 import VideoSearch from '@/components/VideoSearch';
+import { VideoConverter } from '@/components/VideoConverter';
 
 const Index: React.FC = () => {
   const [url, setUrl] = useState('');
@@ -17,7 +18,7 @@ const Index: React.FC = () => {
   const [duration, setDuration] = useState(180);
   const [startFrame, setStartFrame] = useState(0);
   const [endFrame, setEndFrame] = useState(60);
-  const [activeTab, setActiveTab] = useState<'url' | 'search'>('search');
+  const [activeTab, setActiveTab] = useState<'url' | 'search' | 'converter'>('search');
   
   const videoPlayerRef = useRef<VideoPlayerHandle>(null);
 
@@ -122,8 +123,10 @@ const Index: React.FC = () => {
                 onClipboardDownload={handleLoadVideo}
                 isLoading={isLoading}
               />
-            ) : (
+            ) : activeTab === 'search' ? (
               <VideoSearch onSelectVideo={handleSelectVideo} />
+            ) : (
+              <VideoConverter />
             )}
           </section>
 

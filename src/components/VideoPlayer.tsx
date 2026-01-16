@@ -142,6 +142,25 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({
         <div className="flex-1 mx-4 h-0.5 bg-ink opacity-20" />
         <span className="font-mono text-sm text-ink">{formatTime(duration)}</span>
       </div>
+
+      {/* Playback Speed Controls */}
+      <div className="mt-3 flex items-center justify-center gap-2">
+        <span className="text-xs font-hand text-muted-foreground">Speed:</span>
+        {[0.25, 0.5, 1, 2].map((speed) => (
+          <button
+            key={speed}
+            onClick={() => {
+              if (playerRef.current?.setPlaybackRate) {
+                playerRef.current.setPlaybackRate(speed);
+              }
+            }}
+            className="px-2 py-1 text-xs font-mono sketch-border bg-paper text-ink hover:shadow-sketch-sm hover:-translate-y-0.5 transition-all"
+            style={{ transform: `rotate(${Math.random() * 2 - 1}deg)` }}
+          >
+            {speed}x
+          </button>
+        ))}
+      </div>
     </div>
   );
 });

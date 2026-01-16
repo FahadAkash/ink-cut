@@ -16,6 +16,9 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [quality, setQuality] = useState('highest');
+  const [format, setFormat] = useState('mp4');
+  const [audioOnly, setAudioOnly] = useState(false);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -35,7 +38,10 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
         body: JSON.stringify({
           videoId,
           startTime,
-          endTime
+          endTime,
+          quality,
+          format,
+          audioOnly
         })
       });
 
@@ -66,6 +72,65 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
 
   return (
     <div className="w-full max-w-md mx-auto">
+      {/* Quality and Format Options */}
+      <div className="mb-4 space-y-3">
+        <div className="sketch-card p-4">
+          <label className="block mb-2 text-sm font-sketch text-ink">Quality:</label>
+          <div className="flex gap-2 flex-wrap">
+            {['highest', '1080p', '720p', '480p', '360p'].map((q) => (
+              <button
+                key={q}
+                onClick={() => {
+                  setQuality(q);
+                  setAudioOnly(false);
+                }}
+                className={`px-3 py-1 text-sm font-hand sketch-border transition-all ${
+                  quality === q && !audioOnly
+                    ? 'bg-ink text-paper'
+                    : 'bg-paper text-ink hover:shadow-sketch-sm'
+                }`}
+                style={{ transform: `rotate(${Math.random() * 2 - 1}deg)` }}
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="sketch-card p-4">
+          <label className="block mb-2 text-sm font-sketch text-ink">Format:</label>
+          <div className="flex gap-2">
+            {['mp4', 'webm'].map((f) => (
+              <button
+                key={f}
+                onClick={() => setFormat(f)}
+                disabled={audioOnly}
+                className={`px-4 py-1 text-sm font-hand sketch-border transition-all disabled:opacity-30 ${
+                  format === f && !audioOnly
+                    ? 'bg-ink text-paper'
+                    : 'bg-paper text-ink hover:shadow-sketch-sm'
+                }`}
+                style={{ transform: `rotate(${Math.random() * 2 - 1}deg)` }}
+              >
+                {f.toUpperCase()}
+              </button>
+            ))}
+            <button
+              onClick={() => setAudioOnly(true)}
+              className={`px-4 py-1 text-sm font-hand sketch-border transition-all ${
+                audioOnly
+                  ? 'bg-ink text-paper'
+                  : 'bg-paper text-ink hover:shadow-sketch-sm'
+              }`}
+              style={{ transform: `rotate(${Math.random() * 2 - 1}deg)` }}
+            >
+              🎵 Audio Only (MP3)
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Download Button */}
       <button
         onClick={handleDownload}
         disabled={disabled || isDownloading}
@@ -105,7 +170,9 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
       <p className="mt-4 text-center font-hand text-muted-foreground">
         {disabled 
           ? '← Load a video & select frames first'
-          : `Clip: ${formatTime(startTime)} → ${formatTime(endTime)}`
+          : audioOnly
+            ? `Audio: ${formatTime(startTime)} → ${formatTime(endTime)} (MP3)`
+            : `${quality} ${format.toUpperCase()}: ${formatTime(startTime)} → ${formatTime(endTime)}`
         }
       </p>
 

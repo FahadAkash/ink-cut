@@ -10,7 +10,24 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+release
+*.exe
+*.AppImage
+*.dmg
+*.blockmap
 *.local
+
+# Environment files (contains API keys)
+.env
+.env.local
+.env.*.local
+server/.env
+server/.env.local
+
+# Server downloads and temp files
+server/downloads/
+server/*.mp4
+server/*.webm
 
 # Editor directories and files
 .vscode/*

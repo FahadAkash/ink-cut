@@ -137,7 +137,7 @@ app.get('/api/search', async (req, res) => {
 // Download video segment
 app.post('/api/download', async (req, res) => {
   try {
-    const { videoId, startTime, endTime } = req.body;
+    const { videoId, startTime, endTime, quality = 'highest', format = 'mp4', audioOnly = false } = req.body;
     
     if (!videoId || startTime === undefined || endTime === undefined) {
       return res.status(400).json({ error: 'videoId, startTime, and endTime are required' });
@@ -149,28 +149,66 @@ app.post('/api/download', async (req, res) => {
     
     const timestamp = Date.now();
     const tempFilePath = path.join(DOWNLOADS_DIR, `temp_${timestamp}.mp4`);
-    const outputFilePath = path.join(DOWNLOADS_DIR, `${title}_${timestamp}.mp4`);
+    const extension = audioOnly ? 'mp3' : format;
+    const outputFilePath = path.join(DOWNLOADS_DIR, `${title}_${timestamp}.${extension}`);
     const outputFileName = path.basename(outputFilePath);
 
-    // Select the best format with both video and audio
-    const format = ytdl.chooseFormat(info.formats, { quality: 'highestvideo', filter: 'audioandvideo' });
+    // Select format based on quality preference
+    let selectedFormat;
+    if (audioOnly) {
+      // Get audio only
+      selectedFormat = ytdl.chooseFormat(info.formats, { quality: 'highestaudio', filter: 'audioonly' });
+    } else {
+      // Quality mapping
+      const qualityMap = {
+        'highest': 'highestvideo',
+        '1080p': 'highestvideo',
+        '720p': '136', // 720p video
+        '480p': '135', // 480p video
+        '360p': '134'  // 360p video
+      };
+
+      const qualityFilter = qualityMap[quality] || 'highestvideo';
+      selectedFormat = ytdl.chooseFormat(info.formats, { quality: qualityFilter, filter: 'audioandvideo' });
+      
+      // Fallback if specific quality not available
+      if (!selectedFormat) {
+        selectedFormat = ytdl.chooseFormat(info.formats, { quality: 'highestvideo', filter: 'audioandvideo' });
+      }
+    }
     
-    if (!format) {
+    if (!selectedFormat) {
       return res.status(400).json({ error: 'No suitable video format found' });
     }
 
-    // Download the full video first
-    const downloadStream = ytdl(url, { format });
+    // Download the full video/audio first
+    const downloadStream = ytdl(url, { format: selectedFormat });
     const writeStream = fs.createWriteStream(tempFilePath);
     
     downloadStream.pipe(writeStream);
 
     writeStream.on('finish', () => {
-      // Use FFmpeg to extract the segment
-      ffmpeg(tempFilePath)
-        .setStartTime(startTime)
-        .setDuration(endTime - startTime)
-        .output(outputFilePath)
+      // Use FFmpeg to extract segment and convert format
+      const ffmpegCommand = ffmpeg(tempFilePath);
+      
+      if (audioOnly) {
+        // Extract audio as MP3
+        ffmpegCommand
+          .setStartTime(startTime)
+          .setDuration(endTime - startTime)
+          .toFormat('mp3')
+          .audioBitrate(192)
+          .output(outputFilePath);
+      } else {
+        // Extract video segment
+        ffmpegCommand
+          .setStartTime(startTime)
+          .setDuration(endTime - startTime)
+          .toFormat(format)
+          .output(outputFilePath);
+      }
+
+      ffmpegCommand
         .on('end', () => {
           // Clean up temp file
           fs.unlinkSync(tempFilePath);
@@ -179,7 +217,10 @@ app.post('/api/download', async (req, res) => {
             success: true,
             fileName: outputFileName,
             downloadUrl: `/downloads/${outputFileName}`,
-            message: 'Video segment processed successfully'
+            message: audioOnly 
+              ? 'Audio extracted successfully' 
+              : 'Video segment processed successfully',
+            fileType: extension
           });
         })
         .on('error', (err) => {
@@ -188,7 +229,7 @@ app.post('/api/download', async (req, res) => {
           if (fs.existsSync(tempFilePath)) {
             fs.unlinkSync(tempFilePath);
           }
-          res.status(500).json({ error: 'Failed to process video segment', details: err.message });
+          res.status(500).json({ error: 'Failed to process media', details: err.message });
         })
         .run();
     });
