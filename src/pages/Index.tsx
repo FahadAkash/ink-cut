@@ -6,15 +6,19 @@ import DownloadButton from '@/components/DownloadButton';
 import StepIndicator from '@/components/StepIndicator';
 import SketchDecorations from '@/components/SketchDecorations';
 import SketchIcon from '@/components/SketchIcon';
+import InputTabs from '@/components/InputTabs';
+import VideoSearch from '@/components/VideoSearch';
 
 const Index: React.FC = () => {
   const [url, setUrl] = useState('');
   const [videoId, setVideoId] = useState<string | null>(null);
+  const [videoTitle, setVideoTitle] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [duration] = useState(180); // Demo: 3 minutes
   const [currentTime] = useState(0);
   const [startFrame, setStartFrame] = useState(0);
   const [endFrame, setEndFrame] = useState(60);
+  const [activeTab, setActiveTab] = useState<'url' | 'search'>('search');
 
   const extractVideoId = (url: string): string | null => {
     const patterns = [
@@ -29,6 +33,17 @@ const Index: React.FC = () => {
     return null;
   };
 
+  const handleSelectVideo = useCallback((id: string, title: string) => {
+    setIsLoading(true);
+    setTimeout(() => {
+      setVideoId(id);
+      setVideoTitle(title);
+      setStartFrame(0);
+      setEndFrame(60);
+      setIsLoading(false);
+    }, 800);
+  }, []);
+
   const handleLoadVideo = useCallback(() => {
     const id = extractVideoId(url);
     if (id) {
@@ -36,6 +51,7 @@ const Index: React.FC = () => {
       // Simulate loading
       setTimeout(() => {
         setVideoId(id);
+        setVideoTitle('YouTube Video');
         setStartFrame(0);
         setEndFrame(60);
         setIsLoading(false);
@@ -84,19 +100,34 @@ const Index: React.FC = () => {
 
         {/* Main Content */}
         <div className="max-w-4xl mx-auto space-y-10">
-          {/* URL Input Section */}
-          <section className="sketch-card animate-wobble" style={{ animationDuration: '6s' }}>
-            <UrlInput
-              value={url}
-              onChange={setUrl}
-              onSubmit={handleLoadVideo}
-              isLoading={isLoading}
-            />
+          {/* Input Section with Tabs */}
+          <section className="sketch-card" style={{ transform: 'rotate(-0.3deg)' }}>
+            <InputTabs activeTab={activeTab} onTabChange={setActiveTab} />
+            
+            {activeTab === 'url' ? (
+              <UrlInput
+                value={url}
+                onChange={setUrl}
+                onSubmit={handleLoadVideo}
+                isLoading={isLoading}
+              />
+            ) : (
+              <VideoSearch onSelectVideo={handleSelectVideo} />
+            )}
           </section>
 
           {/* Video Player */}
           {videoId && (
             <section className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              {/* Selected video title */}
+              {videoTitle && (
+                <div className="text-center">
+                  <h2 className="text-2xl font-sketch text-ink">
+                    ✂️ Now editing: <span className="sketch-underline">{videoTitle}</span>
+                  </h2>
+                </div>
+              )}
+              
               <VideoPlayer
                 videoId={videoId}
                 currentTime={currentTime}
