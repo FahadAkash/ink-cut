@@ -1,96 +1,86 @@
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Patrick+Hand&family=Space+Mono:wght@400;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
-
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 0 0% 98%;
+    --foreground: 0 0% 5%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 0 0% 5%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 0 0% 5%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 0 0% 8%;
+    --primary-foreground: 0 0% 98%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 0 0% 92%;
+    --secondary-foreground: 0 0% 12%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 0 0% 94%;
+    --muted-foreground: 0 0% 40%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 0 0% 88%;
+    --accent-foreground: 0 0% 8%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 0% 30%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 0 0% 20%;
+    --input: 0 0% 85%;
+    --ring: 0 0% 5%;
 
-    --radius: 0.5rem;
+    --radius: 0.25rem;
 
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Custom sketch variables */
+    --ink: 0 0% 8%;
+    --paper: 0 0% 97%;
+    --sketch-shadow: 2px 2px 0px hsl(0 0% 8%);
+    --sketch-shadow-hover: 4px 4px 0px hsl(0 0% 8%);
+    
+    /* Fonts */
+    --font-hand: 'Patrick Hand', cursive;
+    --font-sketch: 'Caveat', cursive;
+    --font-mono: 'Space Mono', monospace;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: 0 0% 5%;
+    --foreground: 0 0% 95%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 0 0% 8%;
+    --card-foreground: 0 0% 95%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 0 0% 8%;
+    --popover-foreground: 0 0% 95%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 0 0% 95%;
+    --primary-foreground: 0 0% 5%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 0 0% 15%;
+    --secondary-foreground: 0 0% 90%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 60%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 0 0% 20%;
+    --accent-foreground: 0 0% 95%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 0% 70%;
+    --destructive-foreground: 0 0% 5%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --border: 0 0% 80%;
+    --input: 0 0% 20%;
+    --ring: 0 0% 95%;
+
+    --ink: 0 0% 95%;
+    --paper: 0 0% 8%;
+    --sketch-shadow: 2px 2px 0px hsl(0 0% 95%);
+    --sketch-shadow-hover: 4px 4px 0px hsl(0 0% 95%);
   }
 }
 
@@ -100,6 +90,248 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-hand);
   }
+
+  h1, h2, h3 {
+    font-family: var(--font-sketch);
+  }
+}
+
+@layer components {
+  /* Sketch-style border */
+  .sketch-border {
+    border: 2px solid hsl(var(--ink));
+    border-radius: 2px;
+    position: relative;
+  }
+
+  .sketch-border::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border: 1px solid hsl(var(--ink) / 0.3);
+    border-radius: 3px;
+    transform: rotate(0.5deg);
+    pointer-events: none;
+  }
+
+  /* Hand-drawn button effect */
+  .sketch-button {
+    @apply relative px-6 py-3 font-bold transition-all duration-150;
+    font-family: var(--font-hand);
+    background: hsl(var(--paper));
+    border: 2px solid hsl(var(--ink));
+    box-shadow: var(--sketch-shadow);
+    transform: rotate(-0.5deg);
+  }
+
+  .sketch-button:hover {
+    box-shadow: var(--sketch-shadow-hover);
+    transform: rotate(0.5deg) translateY(-2px);
+  }
+
+  .sketch-button:active {
+    box-shadow: 1px 1px 0px hsl(var(--ink));
+    transform: rotate(0deg) translateY(1px);
+  }
+
+  .sketch-button-primary {
+    background: hsl(var(--ink));
+    color: hsl(var(--paper));
+  }
+
+  .sketch-button-primary:hover {
+    background: hsl(var(--ink) / 0.9);
+  }
+
+  /* Ink input style */
+  .ink-input {
+    @apply w-full px-4 py-3 text-lg transition-all duration-200;
+    font-family: var(--font-mono);
+    background: hsl(var(--paper));
+    border: 2px solid hsl(var(--ink));
+    border-radius: 2px;
+    box-shadow: inset 2px 2px 4px hsl(var(--ink) / 0.1);
+  }
+
+  .ink-input:focus {
+    outline: none;
+    box-shadow: var(--sketch-shadow), inset 2px 2px 4px hsl(var(--ink) / 0.1);
+  }
+
+  .ink-input::placeholder {
+    color: hsl(var(--muted-foreground));
+    font-style: italic;
+  }
+
+  /* Sketch card */
+  .sketch-card {
+    @apply p-6;
+    background: hsl(var(--paper));
+    border: 2px solid hsl(var(--ink));
+    box-shadow: var(--sketch-shadow);
+    position: relative;
+  }
+
+  .sketch-card::after {
+    content: '';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 20px;
+    height: 20px;
+    border-top: 2px solid hsl(var(--ink) / 0.3);
+    border-right: 2px solid hsl(var(--ink) / 0.3);
+  }
+
+  /* Video player frame */
+  .video-frame {
+    @apply relative overflow-hidden;
+    background: hsl(var(--ink) / 0.05);
+    border: 3px solid hsl(var(--ink));
+    box-shadow: var(--sketch-shadow);
+  }
+
+  .video-frame::before {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border: 1px dashed hsl(var(--ink) / 0.3);
+    pointer-events: none;
+  }
+
+  /* Range slider sketch style */
+  .sketch-slider {
+    @apply w-full h-3 rounded-none appearance-none cursor-pointer;
+    background: linear-gradient(
+      to right,
+      hsl(var(--ink) / 0.2) 0%,
+      hsl(var(--ink) / 0.2) 100%
+    );
+    border: 2px solid hsl(var(--ink));
+  }
+
+  .sketch-slider::-webkit-slider-thumb {
+    @apply appearance-none w-6 h-6 cursor-grab;
+    background: hsl(var(--paper));
+    border: 2px solid hsl(var(--ink));
+    border-radius: 2px;
+    box-shadow: 2px 2px 0px hsl(var(--ink));
+    transform: rotate(45deg);
+  }
+
+  .sketch-slider::-webkit-slider-thumb:hover {
+    transform: rotate(45deg) scale(1.1);
+  }
+
+  .sketch-slider::-webkit-slider-thumb:active {
+    cursor: grabbing;
+    box-shadow: 1px 1px 0px hsl(var(--ink));
+  }
+
+  .sketch-slider::-moz-range-thumb {
+    @apply w-6 h-6 cursor-grab;
+    background: hsl(var(--paper));
+    border: 2px solid hsl(var(--ink));
+    border-radius: 2px;
+    box-shadow: 2px 2px 0px hsl(var(--ink));
+    transform: rotate(45deg);
+  }
+
+  /* Decorative sketch elements */
+  .sketch-arrow {
+    position: relative;
+  }
+
+  .sketch-arrow::after {
+    content: '→';
+    font-size: 1.5rem;
+    margin-left: 0.5rem;
+  }
+
+  /* Step indicator */
+  .step-circle {
+    @apply w-10 h-10 flex items-center justify-center text-lg font-bold;
+    font-family: var(--font-sketch);
+    background: hsl(var(--paper));
+    border: 2px solid hsl(var(--ink));
+    border-radius: 50%;
+    box-shadow: 2px 2px 0px hsl(var(--ink));
+  }
+
+  .step-circle-active {
+    background: hsl(var(--ink));
+    color: hsl(var(--paper));
+  }
+
+  /* Ink illustration lines */
+  .ink-line {
+    height: 2px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      hsl(var(--ink)) 10%,
+      hsl(var(--ink)) 90%,
+      transparent 100%
+    );
+  }
+
+  /* Wobble animation for hand-drawn feel */
+  @keyframes wobble {
+    0%, 100% { transform: rotate(-0.5deg); }
+    50% { transform: rotate(0.5deg); }
+  }
+
+  .animate-wobble {
+    animation: wobble 3s ease-in-out infinite;
+  }
+
+  /* Ink drip animation */
+  @keyframes ink-drip {
+    0% { transform: translateY(-100%); opacity: 0; }
+    50% { opacity: 1; }
+    100% { transform: translateY(100%); opacity: 0; }
+  }
+
+  .animate-ink-drip {
+    animation: ink-drip 2s ease-in-out infinite;
+  }
+
+  /* Sketch underline */
+  .sketch-underline {
+    position: relative;
+    display: inline-block;
+  }
+
+  .sketch-underline::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 10'%3E%3Cpath d='M0 5 Q 25 0, 50 5 T 100 5' stroke='%23141414' stroke-width='2' fill='none'/%3E%3C/svg%3E") repeat-x;
+    background-size: 100px 10px;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--paper));
+  border-left: 1px solid hsl(var(--ink));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--ink));
+  border: 1px solid hsl(var(--ink));
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--ink) / 0.8);
 }
