@@ -1,6 +1,6 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import UrlInput from '@/components/UrlInput';
-import VideoPlayer from '@/components/VideoPlayer';
+import VideoPlayer, { VideoPlayerHandle } from '@/components/VideoPlayer';
 import FrameSelector from '@/components/FrameSelector';
 import DownloadButton from '@/components/DownloadButton';
 import StepIndicator from '@/components/StepIndicator';
@@ -14,11 +14,12 @@ const Index: React.FC = () => {
   const [videoId, setVideoId] = useState<string | null>(null);
   const [videoTitle, setVideoTitle] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [duration] = useState(180); // Demo: 3 minutes
-  const [currentTime] = useState(0);
+  const [duration, setDuration] = useState(180);
   const [startFrame, setStartFrame] = useState(0);
   const [endFrame, setEndFrame] = useState(60);
   const [activeTab, setActiveTab] = useState<'url' | 'search'>('search');
+  
+  const videoPlayerRef = useRef<VideoPlayerHandle>(null);
 
   const extractVideoId = (url: string): string | null => {
     const patterns = [
@@ -35,13 +36,22 @@ const Index: React.FC = () => {
 
   const handleSelectVideo = useCallback((id: string, title: string) => {
     setIsLoading(true);
+    setVideoId(id);
+    setVideoTitle(title);
+    setStartFrame(0);
+    setEndFrame(60);
     setTimeout(() => {
-      setVideoId(id);
-      setVideoTitle(title);
-      setStartFrame(0);
-      setEndFrame(60);
       setIsLoading(false);
-    }, 800);
+    }, 500);
+  }, []);
+
+  const handleVideoReady = useCallback((videoDuration: number) => {
+    setDuration(videoDuration);
+    setEndFrame(Math.min(60, videoDuration));
+  }, []);
+
+  const handleSeekPreview = useCallback((time: number) => {
+    videoPlayerRef.current?.seekTo(time);
   }, []);
 
   const handleLoadVideo = useCallback(() => {
@@ -129,9 +139,9 @@ const Index: React.FC = () => {
               )}
               
               <VideoPlayer
+                ref={videoPlayerRef}
                 videoId={videoId}
-                currentTime={currentTime}
-                duration={duration}
+                onReady={handleVideoReady}
               />
 
               {/* Frame Selector */}
@@ -141,6 +151,8 @@ const Index: React.FC = () => {
                 endFrame={endFrame}
                 onStartChange={setStartFrame}
                 onEndChange={setEndFrame}
+                onSeekPreview={handleSeekPreview}
+                videoId={videoId}
               />
 
               {/* Download Button */}
