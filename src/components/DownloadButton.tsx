@@ -23,13 +23,45 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     setIsDownloading(true);
-    // Simulate download process
-    setTimeout(() => {
+    
+    try {
+      const response = await fetch('http://localhost:3001/api/download', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          videoId,
+          startTime,
+          endTime
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Download failed');
+      }
+
+      const data = await response.json();
+      
+      // Trigger file download
+      const downloadUrl = `http://localhost:3001${data.downloadUrl}`;
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = data.fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      alert(`✅ Success!\n\nYour video clip has been downloaded:\n${data.fileName}\n\nFrom: ${formatTime(startTime)} to ${formatTime(endTime)}`);
+    } catch (error) {
+      console.error('Download error:', error);
+      alert(`❌ Download failed:\n\n${error.message}\n\nPlease make sure:\n- Backend server is running (npm start in /server)\n- FFmpeg is installed\n- The video is available`);
+    } finally {
       setIsDownloading(false);
-      alert(`Download initiated!\n\nVideo: ${videoId}\nFrom: ${formatTime(startTime)}\nTo: ${formatTime(endTime)}\n\nNote: This is a demo. Backend integration required for actual downloads.`);
-    }, 2000);
+    }
   };
 
   return (

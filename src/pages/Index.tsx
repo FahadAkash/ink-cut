@@ -119,6 +119,7 @@ const Index: React.FC = () => {
                 value={url}
                 onChange={setUrl}
                 onSubmit={handleLoadVideo}
+                onClipboardDownload={handleLoadVideo}
                 isLoading={isLoading}
               />
             ) : (

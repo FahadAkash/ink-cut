@@ -28,27 +28,101 @@ export const VideoSearch: React.FC<VideoSearchProps> = ({ onSelectVideo }) => {
   const [results, setResults] = useState<VideoResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageTokens, setPageTokens] = useState<{[key: number]: string}>({});
+  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
+  const [prevPageToken, setPrevPageToken] = useState<string | null>(null);
+  const [totalPages, setTotalPages] = useState(5); // Show up to 5 pages
 
-  const handleSearch = () => {
+  const handleSearch = async (pageToken?: string, page: number = 1) => {
     if (!query.trim()) return;
     
     setIsSearching(true);
     setHasSearched(true);
     
-    // Simulate search - in production, this would call YouTube API
-    setTimeout(() => {
-      // Filter demo results based on query for realistic feel
-      const filtered = DEMO_RESULTS.filter(v => 
-        v.title.toLowerCase().includes(query.toLowerCase()) ||
-        v.channel.toLowerCase().includes(query.toLowerCase())
-      );
-      setResults(filtered.length > 0 ? filtered : DEMO_RESULTS.slice(0, 4));
+    try {
+      let url = `http://localhost:3001/api/search?q=${encodeURIComponent(query)}&maxResults=12`;
+      if (pageToken) {
+        url += `&pageToken=${pageToken}`;
+      }
+      
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        const error = await response.json();
+        if (response.status === 503) {
+          // API key not configured - show demo results with message
+          setResults(DEMO_RESULTS.slice(0, 12));
+          setCurrentPage(1);
+          setNextPageToken(null);
+          setPrevPageToken(null);
+          setTimeout(() => {
+            alert('⚠️ YouTube API not configured\n\nShowing demo results. To enable real search:\n1. Get a YouTube Data API key from Google Cloud Console\n2. Add it to server/.env file\n3. Restart the backend server');
+          }, 500);
+        } else {
+          throw new Error(error.error || 'Search failed');
+        }
+      } else {
+        const data = await response.json();
+        setResults(data.results || []);
+        setNextPageToken(data.nextPageToken || null);
+        setPrevPageToken(data.prevPageToken || null);
+        setCurrentPage(page);
+        
+        // Store page tokens for direct page navigation
+        if (data.nextPageToken) {
+          setPageTokens(prev => ({...prev, [page + 1]: data.nextPageToken}));
+        }
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+      // Fallback to demo results on error
+      setResults(DEMO_RESULTS.slice(0, 12));
+      setCurrentPage(1);
+      setNextPageToken(null);
+      setPrevPageToken(null);
+      alert(`⚠️ Search failed: ${error.message}\n\nShowing demo results instead.\n\nMake sure the backend server is running:\ncd server && npm start`);
+    } finally {
       setIsSearching(false);
-    }, 800);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') handleSearch();
+    if (e.key === 'Enter') {
+      setCurrentPage(1);
+      setPageTokens({});
+      handleSearch(undefined, 1);
+    }
+  };
+
+  const handlePreviousPage = () => {
+    if (prevPageToken && currentPage > 1) {
+      handleSearch(prevPageToken, currentPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (nextPageToken) {
+      handleSearch(nextPageToken, currentPage + 1);
+    }
+  };
+
+  const handlePageClick = (page: number) => {
+    if (page === currentPage) return;
+    
+    if (page < currentPage) {
+      // Going backwards
+      handlePreviousPage();
+    } else if (page === currentPage + 1) {
+      // Going to next page
+      handleNextPage();
+    } else {
+      // For other pages, use stored token or search from beginning
+      const token = pageTokens[page];
+      if (token) {
+        handleSearch(token, page);
+      }
+    }
   };
 
   return (
@@ -69,7 +143,11 @@ export const VideoSearch: React.FC<VideoSearchProps> = ({ onSelectVideo }) => {
           />
         </div>
         <button
-          onClick={handleSearch}
+          onClick={() => {
+            setCurrentPage(1);
+            setPageTokens({});
+            handleSearch(undefined, 1);
+          }}
           disabled={!query.trim() || isSearching}
           className="sketch-button sketch-button-primary flex items-center gap-2 disabled:opacity-50"
         >
@@ -124,6 +202,60 @@ export const VideoSearch: React.FC<VideoSearchProps> = ({ onSelectVideo }) => {
         </div>
       )}
 
+      {/* Pagination Controls */}
+      {!isSearching && results.length > 0 && (
+        <div className="flex items-center justify-center gap-2 mt-6">
+          {/* Previous Button */}
+          <button
+            onClick={handlePreviousPage}
+            disabled={!prevPageToken || currentPage === 1}
+            className="sketch-button px-4 py-2 disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            ← Previous
+          </button>
+
+          {/* Page Numbers */}
+          <div className="flex gap-2">
+            {[...Array(Math.min(totalPages, 5))].map((_, idx) => {
+              const pageNum = idx + 1;
+              const isActive = pageNum === currentPage;
+              const isAccessible = pageNum <= currentPage || pageTokens[pageNum];
+              
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => handlePageClick(pageNum)}
+                  disabled={!isAccessible && pageNum !== currentPage + 1}
+                  className={`
+                    w-10 h-10 sketch-border font-sketch text-lg
+                    transition-all duration-200
+                    ${isActive 
+                      ? 'bg-ink text-paper border-ink shadow-sketch' 
+                      : 'bg-paper text-ink hover:shadow-sketch-sm hover:-translate-y-0.5'
+                    }
+                    disabled:opacity-30 disabled:cursor-not-allowed
+                  `}
+                  style={{
+                    transform: isActive ? 'rotate(-1deg)' : 'rotate(0.5deg)'
+                  }}
+                >
+                  {pageNum}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Next Button */}
+          <button
+            onClick={handleNextPage}
+            disabled={!nextPageToken}
+            className="sketch-button px-4 py-2 disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            Next →
+          </button>
+        </div>
+      )}
+
       {!isSearching && hasSearched && results.length === 0 && (
         <div className="text-center py-12 border-2 border-dashed border-ink/30">
           <p className="font-hand text-xl text-muted-foreground">No videos found</p>
@@ -141,7 +273,7 @@ export const VideoSearch: React.FC<VideoSearchProps> = ({ onSelectVideo }) => {
 
       {/* API Note */}
       <p className="mt-4 text-xs text-muted-foreground font-hand text-center">
-        ✎ Demo mode: Shows sample videos. Connect YouTube API for full search.
+        ✎ Connected to backend API. Configure YOUTUBE_API_KEY in server/.env for full search.
       </p>
     </div>
   );

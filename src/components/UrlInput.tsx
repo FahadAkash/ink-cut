@@ -5,13 +5,33 @@ interface UrlInputProps {
   value: string;
   onChange: (value: string) => void;
   onSubmit: () => void;
+  onClipboardDownload?: () => void;
   isLoading?: boolean;
 }
 
-export const UrlInput: React.FC<UrlInputProps> = ({ value, onChange, onSubmit, isLoading }) => {
+export const UrlInput: React.FC<UrlInputProps> = ({ value, onChange, onSubmit, onClipboardDownload, isLoading }) => {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && value.trim()) {
       onSubmit();
+    }
+  };
+
+  const handleClipboardPaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text && text.includes('youtube.com') || text.includes('youtu.be')) {
+        onChange(text);
+        setTimeout(() => {
+          if (onClipboardDownload) {
+            onClipboardDownload();
+          }
+        }, 100);
+      } else {
+        alert('⚠️ No YouTube URL found in clipboard\n\nPlease copy a YouTube link first!');
+      }
+    } catch (error) {
+      console.error('Clipboard error:', error);
+      alert('❌ Cannot read clipboard\n\nPlease grant clipboard permissions or paste the URL manually.');
     }
   };
 
@@ -50,7 +70,26 @@ export const UrlInput: React.FC<UrlInputProps> = ({ value, onChange, onSubmit, i
           )}
         </button>
       </div>
-      <p className="mt-2 text-sm text-muted-foreground font-hand">
+      
+      {/* Quick Download from Clipboard Button */}
+      <div className="mt-4 text-center">
+        <button
+          onClick={handleClipboardPaste}
+          disabled={isLoading}
+          className="sketch-button bg-ink text-paper hover:shadow-sketch-hover hover:-translate-y-1 transition-all duration-200 disabled:opacity-50 mx-auto"
+          style={{ transform: 'rotate(-0.5deg)' }}
+        >
+          <div className="flex items-center gap-2">
+            <SketchIcon type="download" size={20} />
+            <span className="font-sketch text-base">📋 Quick Download from Clipboard</span>
+          </div>
+        </button>
+        <p className="mt-2 text-xs text-muted-foreground font-hand">
+          ✎ Copy a YouTube link, then click this button for instant download
+        </p>
+      </div>
+
+      <p className="mt-4 text-sm text-muted-foreground font-hand">
         ✎ Supports YouTube, YouTube Shorts, and youtu.be links
       </p>
     </div>

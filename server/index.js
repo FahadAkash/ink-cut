@@ -1,0 +1,226 @@
+import express from 'express';
+import cors from 'cors';
+import ytdl from '@distube/ytdl-core';
+import { google } from 'googleapis';
+import dotenv from 'dotenv';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+import ffmpeg from 'fluent-ffmpeg';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config();
+
+const app = express();
+const PORT = process.env.PORT || 3001;
+const DOWNLOADS_DIR = path.join(__dirname, process.env.DOWNLOADS_DIR || 'downloads');
+
+// Create downloads directory if it doesn't exist
+if (!fs.existsSync(DOWNLOADS_DIR)) {
+  fs.mkdirSync(DOWNLOADS_DIR, { recursive: true });
+}
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use('/downloads', express.static(DOWNLOADS_DIR));
+
+// YouTube API setup
+const youtube = google.youtube({
+  version: 'v3',
+  auth: process.env.YOUTUBE_API_KEY
+});
+
+// Helper: Format duration from ISO 8601
+function parseDuration(duration) {
+  const match = duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
+  const hours = (match[1] || '0H').slice(0, -1);
+  const minutes = (match[2] || '0M').slice(0, -1);
+  const seconds = (match[3] || '0S').slice(0, -1);
+  return parseInt(hours) * 3600 + parseInt(minutes) * 60 + parseInt(seconds);
+}
+
+// API Endpoints
+
+// Get video info
+app.get('/api/video/info', async (req, res) => {
+  try {
+    const { videoId } = req.query;
+    
+    if (!videoId) {
+      return res.status(400).json({ error: 'Video ID is required' });
+    }
+
+    const url = `https://www.youtube.com/watch?v=${videoId}`;
+    const info = await ytdl.getInfo(url);
+    
+    res.json({
+      title: info.videoDetails.title,
+      duration: parseInt(info.videoDetails.lengthSeconds),
+      thumbnail: info.videoDetails.thumbnails[info.videoDetails.thumbnails.length - 1].url,
+      author: info.videoDetails.author.name
+    });
+  } catch (error) {
+    console.error('Error fetching video info:', error);
+    res.status(500).json({ error: 'Failed to fetch video information', details: error.message });
+  }
+});
+
+// Search YouTube videos
+app.get('/api/search', async (req, res) => {
+  try {
+    const { q, maxResults = 12, pageToken } = req.query;
+    
+    if (!q) {
+      return res.status(400).json({ error: 'Search query is required' });
+    }
+
+    if (!process.env.YOUTUBE_API_KEY) {
+      return res.status(503).json({ 
+        error: 'YouTube API key not configured',
+        message: 'Please add YOUTUBE_API_KEY to your .env file'
+      });
+    }
+
+    const searchResponse = await youtube.search.list({
+      part: ['snippet'],
+      q,
+      maxResults: parseInt(maxResults),
+      pageToken: pageToken || undefined,
+      type: ['video'],
+      videoDuration: 'medium' // Filter out shorts (they're usually under 60 seconds)
+    });
+
+    const videoIds = searchResponse.data.items.map(item => item.id.videoId).join(',');
+    
+    // Get video details including duration
+    const videoResponse = await youtube.videos.list({
+      part: ['contentDetails'],
+      id: videoIds
+    });
+
+    // Filter out shorts (videos under 60 seconds)
+    const results = [];
+    searchResponse.data.items.forEach((item, index) => {
+      const duration = videoResponse.data.items[index]?.contentDetails?.duration;
+      const seconds = duration ? parseDuration(duration) : 0;
+      
+      // Skip shorts (less than 60 seconds)
+      if (seconds >= 60) {
+        const minutes = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        
+        results.push({
+          id: item.id.videoId,
+          title: item.snippet.title,
+          thumbnail: item.snippet.thumbnails.medium?.url || item.snippet.thumbnails.default?.url,
+          channel: item.snippet.channelTitle,
+          duration: `${minutes}:${secs.toString().padStart(2, '0')}`
+        });
+      }
+    });
+
+    res.json({ 
+      results,
+      nextPageToken: searchResponse.data.nextPageToken,
+      prevPageToken: searchResponse.data.prevPageToken,
+      totalResults: searchResponse.data.pageInfo?.totalResults || 0
+    });
+  } catch (error) {
+    console.error('Error searching videos:', error);
+    res.status(500).json({ error: 'Failed to search videos', details: error.message });
+  }
+});
+
+// Download video segment
+app.post('/api/download', async (req, res) => {
+  try {
+    const { videoId, startTime, endTime } = req.body;
+    
+    if (!videoId || startTime === undefined || endTime === undefined) {
+      return res.status(400).json({ error: 'videoId, startTime, and endTime are required' });
+    }
+
+    const url = `https://www.youtube.com/watch?v=${videoId}`;
+    const info = await ytdl.getInfo(url);
+    const title = info.videoDetails.title.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_').substring(0, 50);
+    
+    const timestamp = Date.now();
+    const tempFilePath = path.join(DOWNLOADS_DIR, `temp_${timestamp}.mp4`);
+    const outputFilePath = path.join(DOWNLOADS_DIR, `${title}_${timestamp}.mp4`);
+    const outputFileName = path.basename(outputFilePath);
+
+    // Select the best format with both video and audio
+    const format = ytdl.chooseFormat(info.formats, { quality: 'highestvideo', filter: 'audioandvideo' });
+    
+    if (!format) {
+      return res.status(400).json({ error: 'No suitable video format found' });
+    }
+
+    // Download the full video first
+    const downloadStream = ytdl(url, { format });
+    const writeStream = fs.createWriteStream(tempFilePath);
+    
+    downloadStream.pipe(writeStream);
+
+    writeStream.on('finish', () => {
+      // Use FFmpeg to extract the segment
+      ffmpeg(tempFilePath)
+        .setStartTime(startTime)
+        .setDuration(endTime - startTime)
+        .output(outputFilePath)
+        .on('end', () => {
+          // Clean up temp file
+          fs.unlinkSync(tempFilePath);
+          
+          res.json({
+            success: true,
+            fileName: outputFileName,
+            downloadUrl: `/downloads/${outputFileName}`,
+            message: 'Video segment processed successfully'
+          });
+        })
+        .on('error', (err) => {
+          console.error('FFmpeg error:', err);
+          // Clean up temp file
+          if (fs.existsSync(tempFilePath)) {
+            fs.unlinkSync(tempFilePath);
+          }
+          res.status(500).json({ error: 'Failed to process video segment', details: err.message });
+        })
+        .run();
+    });
+
+    writeStream.on('error', (err) => {
+      console.error('Write stream error:', err);
+      res.status(500).json({ error: 'Failed to download video', details: err.message });
+    });
+
+  } catch (error) {
+    console.error('Error downloading video:', error);
+    res.status(500).json({ error: 'Failed to download video', details: error.message });
+  }
+});
+
+// Health check
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    message: 'InkCut backend server is running',
+    youtubeApiConfigured: !!process.env.YOUTUBE_API_KEY
+  });
+});
+
+// Start server
+app.listen(PORT, () => {
+  console.log(`🚀 InkCut backend server running on http://localhost:${PORT}`);
+  console.log(`📁 Downloads directory: ${DOWNLOADS_DIR}`);
+  console.log(`🔑 YouTube API: ${process.env.YOUTUBE_API_KEY ? 'Configured ✓' : 'Not configured ✗'}`);
+  console.log('\nAvailable endpoints:');
+  console.log(`  GET  /health - Health check`);
+  console.log(`  GET  /api/video/info?videoId=xxx - Get video metadata`);
+  console.log(`  GET  /api/search?q=query - Search YouTube videos`);
+  console.log(`  POST /api/download - Download video segment`);
+});
