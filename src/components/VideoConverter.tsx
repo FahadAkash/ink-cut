@@ -5,6 +5,7 @@ declare global {
   interface Window {
     electron?: {
       selectFolder: () => Promise<string>;
+      getFilePath: (file: File) => string;
       platform: string;
     };
   }
@@ -86,8 +87,10 @@ export const VideoConverter: React.FC<VideoConverterProps> = () => {
         setFiles(prev => prev.map(f => f.file === item.file ? { ...f, status: 'converting' } : f));
 
         try {
-          // @ts-ignore - Electron file path
-          const inputPath = item.file.path;
+          // Use the secure Electron bridge to get the local file path
+          const inputPath = window.electron?.getFilePath 
+            ? window.electron.getFilePath(item.file)
+            : (item.file as any).path;
 
           if (!inputPath) throw new Error('No file path found');
 
@@ -236,7 +239,16 @@ export const VideoConverter: React.FC<VideoConverterProps> = () => {
                 disabled:opacity-50 disabled:cursor-not-allowed
               `}
             >
-              {isProcessing ? 'Processing Queue...' : `Convert ${files.filter(f => f.status === 'pending').length} Files`}
+              {isProcessing ? (
+                <div className="flex flex-col items-center">
+                  <span className="text-lg">Processing...</span>
+                  <span className="text-xs font-hand opacity-80">
+                    {files.filter(f => f.status === 'completed').length} of {files.length} Completed
+                  </span>
+                </div>
+              ) : (
+                `Convert ${files.filter(f => f.status === 'pending').length} Files`
+              )}
             </button>
           </div>
         </div>

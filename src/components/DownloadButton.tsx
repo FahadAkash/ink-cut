@@ -19,6 +19,7 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
   const [quality, setQuality] = useState('highest');
   const [format, setFormat] = useState('mp4');
   const [audioOnly, setAudioOnly] = useState(false);
+  const [status, setStatus] = useState<string>('');
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -28,8 +29,10 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
 
   const handleDownload = async () => {
     setIsDownloading(true);
+    setStatus('Step 1/3: Connecting to server...');
     
     try {
+      setStatus('Step 2/3: Downloading video...');
       const response = await fetch('http://localhost:3001/api/download', {
         method: 'POST',
         headers: {
@@ -50,6 +53,7 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
         throw new Error(error.error || 'Download failed');
       }
 
+      setStatus('Step 3/3: Finalizing clip...');
       const data = await response.json();
       
       // Trigger file download
@@ -61,9 +65,12 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
       link.click();
       document.body.removeChild(link);
       
+      setStatus('✅ Processing complete!');
+      setTimeout(() => setStatus(''), 5000);
       alert(`✅ Success!\n\nYour video clip has been downloaded:\n${data.fileName}\n\nFrom: ${formatTime(startTime)} to ${formatTime(endTime)}`);
     } catch (error) {
       console.error('Download error:', error);
+      setStatus('❌ Failed');
       alert(`❌ Download failed:\n\n${error.message}\n\nPlease make sure:\n- Backend server is running (npm start in /server)\n- FFmpeg is installed\n- The video is available`);
     } finally {
       setIsDownloading(false);
@@ -154,10 +161,10 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
         }}
       >
         {isDownloading ? (
-          <>
-            <span className="animate-spin text-3xl">⟳</span>
-            <span>Preparing Clip...</span>
-          </>
+          <div className="flex flex-col items-center">
+            <span className="animate-spin text-3xl mb-1">⟳</span>
+            <span className="text-sm font-hand">{status || 'Processing...'}</span>
+          </div>
         ) : (
           <>
             <SketchIcon type="download" size={32} />

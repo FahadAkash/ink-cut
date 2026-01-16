@@ -8,7 +8,7 @@ interface InputTabsProps {
 
 export const InputTabs: React.FC<InputTabsProps> = ({ activeTab, onTabChange }) => {
   return (
-    <div className="flex border-b-2 border-ink mb-6 overflow-x-auto">
+    <div className="flex border-b-2 border-ink mb-6 overflow-x-auto scrollbar-hide">
       <button
         onClick={() => onTabChange('url')}
         className={`
