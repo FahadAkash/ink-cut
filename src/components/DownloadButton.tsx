@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import SketchIcon from './SketchIcon';
+import API_CONFIG from '../config';
 
 interface DownloadButtonProps {
   startTime: number;
@@ -27,13 +28,47 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const [savePath, setSavePath] = useState<string>('');
+
+  const handleFolderSelect = async () => {
+    try {
+      if ((window as any).electron) {
+        // Desktop App: Use Electron's native dialog
+        const path = await (window as any).electron.selectFolder();
+        if (path) {
+          setSavePath(path);
+        }
+      } else {
+        // Web App: Use File System Access API
+        try {
+           // @ts-ignore - showDirectoryPicker is not yet in all TS definitions
+          const dirHandle = await window.showDirectoryPicker();
+          setSavePath(dirHandle.name); // We can only get the directory name in web for security
+          // Note: Full path access is not possible in browser for security reasons, 
+          // but we can assume downloads go to the browser's default download folder
+          // or use the File System Access API to write directly (advanced).
+          // For this MVP, we'll just show the name to indicate selection.
+        } catch (err) {
+          if ((err as Error).name !== 'AbortError') {
+             console.error('Folder select error:', err);
+             alert('Folder selection is not supported in this browser or was cancelled.');
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to select folder:', error);
+    }
+  };
+
   const handleDownload = async () => {
     setIsDownloading(true);
     setStatus('Step 1/3: Connecting to server...');
     
     try {
       setStatus('Step 2/3: Downloading video...');
-      const response = await fetch('http://localhost:3001/api/download', {
+      
+      // ... existing download logic ...
+      const response = await fetch(`${API_CONFIG.BASE_URL}/api/download`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -44,7 +79,8 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
           endTime,
           quality,
           format,
-          audioOnly
+          audioOnly,
+          savePath: (window as any).electron ? savePath : undefined // Only send path if in Electron
         })
       });
 
@@ -56,8 +92,16 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
       setStatus('Step 3/3: Finalizing clip...');
       const data = await response.json();
       
-      // Trigger file download
-      const downloadUrl = `http://localhost:3001${data.downloadUrl}`;
+      // Trigger file download (Web & Electron)
+      // Even in Electron, we can trigger a download if we want to save to a specific place not handled by backend,
+      // but here the backend saves it. 
+      // If we are on Web, we MUST trigger the browser download.
+      // If we are on Electron AND provided a savePath to backend, backend might move it there.
+      
+      // For now, consistent behavior: Trigger download
+       const downloadUrl = data.downloadUrl.startsWith('http') 
+        ? data.downloadUrl 
+        : `${API_CONFIG.BASE_URL}${data.downloadUrl}`;
       const link = document.createElement('a');
       link.href = downloadUrl;
       link.download = data.fileName;
@@ -68,10 +112,10 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
       setStatus('✅ Processing complete!');
       setTimeout(() => setStatus(''), 5000);
       alert(`✅ Success!\n\nYour video clip has been downloaded:\n${data.fileName}\n\nFrom: ${formatTime(startTime)} to ${formatTime(endTime)}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Download error:', error);
       setStatus('❌ Failed');
-      alert(`❌ Download failed:\n\n${error.message}\n\nPlease make sure:\n- Backend server is running (npm start in /server)\n- FFmpeg is installed\n- The video is available`);
+      alert(`❌ Download failed:\n\n${error.message || error}\n\nPlease make sure:\n- Backend server is running\n- FFmpeg is installed\n- The video is available`);
     } finally {
       setIsDownloading(false);
     }
@@ -133,6 +177,22 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
             >
               🎵 Audio Only (MP3)
             </button>
+          </div>
+        </div>
+
+        <div className="sketch-card p-4">
+          <label className="block mb-2 text-sm font-sketch text-ink">Save Location:</label>
+          <div className="flex gap-2 items-center">
+             <button
+              onClick={handleFolderSelect}
+              className="px-4 py-1 text-sm font-hand sketch-border bg-paper text-ink hover:shadow-sketch-sm transition-all"
+              style={{ transform: `rotate(${Math.random() * 2 - 1}deg)` }}
+            >
+              📁 Select Folder
+            </button>
+            <span className="text-xs font-hand text-muted-foreground truncate max-w-[200px]">
+              {savePath || 'Default Downloads Folder'}
+            </span>
           </div>
         </div>
       </div>

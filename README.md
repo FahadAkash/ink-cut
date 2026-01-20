@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![InkCut Logo](public/placeholder.svg)
+![InkCut Logo](public/preview.png)
 
 **A beautiful, sketch-style web application for downloading specific segments of YouTube videos**
 
@@ -149,9 +149,35 @@ InkCut is now available as a standalone desktop application! This provides enhan
 
 ### Build Windows Executable (.exe)
 ```bash
-npm run build:win
+- `npm run build:win`: Creates a Windows installer in the `release/` folder.
+- `npm run dev:electron`: Runs the app in Electron development mode.
 ```
-The installer will be generated in the `release/` folder.
+
+### ⚠️ Icon Troubleshooting
+If you get an error like `Reserved header is not 0` during the Windows build, your `favicon.ico` is likely a renamed PNG.
+**Fix:** Use an online converter (e.g., [icoconvert.com](https://icoconvert.com)) to turn your PNG into a real Windows `.ico` file, then replace `public/favicon.ico`.
+
+## 🌐 Web Deployment
+
+### 1. Backend (Render.com)
+1. Create a **New Web Service** on Render.
+2. Select your repository.
+3. Set **Root Directory** to `server`.
+4. Build Command: `npm install`
+5. Start Command: `node index.js`
+6. Add **Environment Variables**:
+   - `YOUTUBE_API_KEY`: Your Google API key
+   - `CORS_ORIGIN`: Your Cloudflare URL (optional)
+
+### 2. Frontend (Cloudflare Pages)
+1. In `src/config.ts`, update `BASE_URL` to your Render service URL.
+2. Run `npm run build`.
+3. Deploy to Cloudflare:
+   ```bash
+   npx wrangler pages deploy dist
+   ```
+
+## 🛠️ Tech Stack
 
 ---
 

@@ -48,7 +48,8 @@ const Index: React.FC = () => {
 
   const handleVideoReady = useCallback((videoDuration: number) => {
     setDuration(videoDuration);
-    setEndFrame(Math.min(60, videoDuration));
+    // Adjust end frame if video is shorter than 60 seconds
+    setEndFrame(prev => Math.min(prev, videoDuration));
   }, []);
 
   const handleSeekPreview = useCallback((time: number) => {
@@ -64,7 +65,8 @@ const Index: React.FC = () => {
         setVideoId(id);
         setVideoTitle('YouTube Video');
         setStartFrame(0);
-        setEndFrame(60);
+        // We'll adjust this properly when the player is ready
+        setEndFrame(60); 
         setIsLoading(false);
       }, 1500);
     } else {
@@ -73,9 +75,9 @@ const Index: React.FC = () => {
   }, [url]);
 
   const steps = [
-    { number: 1, label: 'Paste Link', isActive: !videoId, isComplete: !!videoId },
-    { number: 2, label: 'Preview Video', isActive: !!videoId && startFrame === 0 && endFrame === 60, isComplete: !!videoId && (startFrame !== 0 || endFrame !== 60) },
-    { number: 3, label: 'Select Frames', isActive: !!videoId && (startFrame !== 0 || endFrame !== 60), isComplete: false },
+    { number: 1, label: 'Find Video', isActive: !videoId, isComplete: !!videoId },
+    { number: 2, label: 'Review Ink', isActive: !!videoId && startFrame === 0 && endFrame <= 60, isComplete: !!videoId && (startFrame !== 0 || endFrame !== 60) },
+    { number: 3, label: 'Cut Clip', isActive: !!videoId && (startFrame !== 0 || endFrame !== 60), isComplete: false },
     { number: 4, label: 'Download', isActive: false, isComplete: false },
   ];
 
@@ -89,7 +91,7 @@ const Index: React.FC = () => {
           <div className="inline-flex items-center gap-3 mb-4">
             <SketchIcon type="scissors" size={48} className="text-ink animate-wobble" />
             <h1 className="text-5xl md:text-7xl font-sketch text-ink tracking-tight">
-              <span className="sketch-underline">ClipCraft</span>
+              <span className="sketch-underline">InkCut</span>
             </h1>
           </div>
           <p className="text-xl md:text-2xl font-hand text-muted-foreground max-w-lg mx-auto">
@@ -129,24 +131,43 @@ const Index: React.FC = () => {
               <VideoConverter />
             )}
           </section>
-
-          {/* Video Player */}
+          {/* Video Player Section */}
           {videoId && (
             <section className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              {/* Selected video title */}
+              {/* Selected video title and reload option */}
               {videoTitle && (
-                <div className="text-center">
+                <div className="flex items-center justify-between">
                   <h2 className="text-2xl font-sketch text-ink">
                     ✂️ Now editing: <span className="sketch-underline">{videoTitle}</span>
                   </h2>
+                  <button 
+                    onClick={() => {
+                      const currentId = videoId;
+                      setVideoId(null);
+                      setTimeout(() => setVideoId(currentId), 50);
+                    }}
+                    className="text-xs font-hand text-ink/60 hover:text-ink underline"
+                  >
+                    ⟳ Reload Player
+                  </button>
                 </div>
               )}
               
-              <VideoPlayer
-                ref={videoPlayerRef}
-                videoId={videoId}
-                onReady={handleVideoReady}
-              />
+              <div className="relative group">
+                <VideoPlayer
+                  ref={videoPlayerRef}
+                  videoId={videoId}
+                  onReady={handleVideoReady}
+                />
+                {!duration && videoId && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-paper/90 z-20 pointer-events-none">
+                    <div className="text-center p-6 sketch-card">
+                      <p className="text-ink font-hand text-lg">⚠️ Video playback might be restricted</p>
+                      <p className="text-xs text-muted-foreground mt-2">Try searching for a different version or paste the URL again.</p>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Frame Selector */}
               <FrameSelector

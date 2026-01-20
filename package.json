@@ -26,24 +26,32 @@
   "build": {
     "appId": "com.inkcut.app",
     "productName": "InkCut",
+    "icon": "public/favicon.ico",
     "directories": {
       "output": "release"
     },
     "files": [
-      "dist/**/*",
-      "server/**/*",
       "electron.js",
       "package.json",
-      "!server/node_modules",
-      "!server/.env"
+      "src/preload.js"
     ],
     "extraResources": [
       {
-        "from": "server/node_modules",
-        "to": "server/node_modules"
+        "from": "server",
+        "to": "server",
+        "filter": [
+          "**/*",
+          "!node_modules/.bin",
+          "!.env"
+        ]
+      },
+      {
+        "from": "dist",
+        "to": "dist"
       }
     ],
     "win": {
+      "icon": "public/favicon.ico",
       "target": [
         "nsis"
       ],

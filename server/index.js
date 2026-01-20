@@ -7,6 +7,10 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import ffmpeg from 'fluent-ffmpeg';
+import ffmpegStatic from 'ffmpeg-static';
+
+// Configure FFmpeg to use the static binary
+ffmpeg.setFfmpegPath(ffmpegStatic);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -22,9 +26,19 @@ if (!fs.existsSync(DOWNLOADS_DIR)) {
   fs.mkdirSync(DOWNLOADS_DIR, { recursive: true });
 }
 
+// Serve frontend in production (packaged)
+const DIST_DIR = path.join(__dirname, '../dist');
+if (fs.existsSync(DIST_DIR)) {
+  app.use(express.static(DIST_DIR));
+}
+
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.url}`);
+  next();
+});
 app.use('/downloads', express.static(DOWNLOADS_DIR));
 
 // YouTube API setup
@@ -54,7 +68,8 @@ app.get('/api/video/info', async (req, res) => {
     }
 
     const url = `https://www.youtube.com/watch?v=${videoId}`;
-    const info = await ytdl.getInfo(url);
+    const options = getTdOptions();
+    const info = await ytdl.getInfo(url, options);
     
     res.json({
       title: info.videoDetails.title,
@@ -134,6 +149,29 @@ app.get('/api/search', async (req, res) => {
   }
 });
 
+// Helper to get ytdl options with cookies if available
+const getTdOptions = () => {
+  const options = {
+    requestOptions: {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      }
+    }
+  };
+
+  try {
+    const cookiePath = path.join(__dirname, 'cookies.json');
+    if (fs.existsSync(cookiePath)) {
+      const cookies = JSON.parse(fs.readFileSync(cookiePath, 'utf8'));
+      options.agent = ytdl.createAgent(cookies);
+      console.log('🍪 YouTube cookies loaded successfully');
+    }
+  } catch (err) {
+    console.warn('⚠️ Failed to load cookies:', err.message);
+  }
+  return options;
+};
+
 // Download video segment
 app.post('/api/download', async (req, res) => {
   try {
@@ -144,7 +182,9 @@ app.post('/api/download', async (req, res) => {
     }
 
     const url = `https://www.youtube.com/watch?v=${videoId}`;
-    const info = await ytdl.getInfo(url);
+    const options = getTdOptions();
+    
+    const info = await ytdl.getInfo(url, options);
     const title = info.videoDetails.title.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_').substring(0, 50);
     
     const timestamp = Date.now();
@@ -182,7 +222,7 @@ app.post('/api/download', async (req, res) => {
     }
 
     // Download the full video/audio first
-    const downloadStream = ytdl(url, { format: selectedFormat });
+    const downloadStream = ytdl(url, { ...options, format: selectedFormat });
     const writeStream = fs.createWriteStream(tempFilePath);
     
     downloadStream.pipe(writeStream);
@@ -255,13 +295,135 @@ app.get('/health', (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+// Fallback for SPA routing - Register this AFTER all API routes
+app.get('*', (req, res) => {
+  const DIST_DIR = path.join(__dirname, '../dist');
+  const indexHtml = path.join(DIST_DIR, 'index.html');
+  
+  console.log(`Checking for frontend at: ${indexHtml}`);
+  
+  if (fs.existsSync(indexHtml)) {
+    res.sendFile(indexHtml);
+  } else {
+    console.error(`Frontend file not found at: ${indexHtml}`);
+    res.status(404).json({ 
+      error: 'Frontend not found',
+      path: indexHtml,
+      exists: false,
+      cwd: process.cwd(),
+      dirname: __dirname
+    });
+  }
+});
+
+// Serve a dedicated player page for embedding in Electron
+app.get('/api/player/:videoId', (req, res) => {
+  const { videoId } = req.params;
+  
+  // Send a complete, self-contained HTML page with no external dependencies
+  res.setHeader('Content-Type', 'text/html');
+  res.send(`<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <style>
+      body, html { 
+        margin: 0; 
+        padding: 0; 
+        width: 100%; 
+        height: 100%; 
+        overflow: hidden; 
+        background: #000; 
+      }
+      #player { 
+        width: 100%; 
+        height: 100%; 
+      }
+    </style>
+  </head>
+  <body>
+    <div id="player"></div>
+    <script>
+      // Load YouTube IFrame API
+      var tag = document.createElement('script');
+      tag.src = "https://www.youtube.com/iframe_api";
+      var firstScriptTag = document.getElementsByTagName('script')[0];
+      firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+      var player;
+      function onYouTubeIframeAPIReady() {
+        player = new YT.Player('player', {
+          height: '100%',
+          width: '100%',
+          videoId: '${videoId}',
+          playerVars: {
+            'playsinline': 1,
+            'rel': 0,
+            'modestbranding': 1,
+            'origin': window.location.origin
+          },
+          events: {
+            'onReady': onPlayerReady,
+            'onStateChange': onPlayerStateChange,
+            'onError': onPlayerError
+          }
+        });
+      }
+
+      function onPlayerReady(event) {
+        window.parent.postMessage({ type: 'READY', duration: event.target.getDuration() }, '*');
+      }
+
+      function onPlayerStateChange(event) {
+         if (event.data == YT.PlayerState.PLAYING) {
+            setInterval(function() {
+               if (player && player.getCurrentTime) {
+                 window.parent.postMessage({ type: 'TIME_UPDATE', currentTime: player.getCurrentTime() }, '*');
+               }
+            }, 250);
+         }
+      }
+       
+       function onPlayerError(event) {
+          window.parent.postMessage({ type: 'ERROR', data: event.data }, '*');
+       }
+
+      // Listen for messages from parent
+      window.addEventListener('message', function(event) {
+        if (!player || !player.seekTo) return;
+        
+        if (event.data.type === 'SEEK') {
+          player.seekTo(event.data.time);
+        }
+        if (event.data.type === 'PAUSE') {
+          player.pauseVideo();
+        }
+         if (event.data.type === 'PLAY') {
+          player.playVideo();
+        }
+      });
+    </script>
+  </body>
+</html>`);
+});
+
+// Start server
+const server = app.listen(PORT, () => {
   console.log(`🚀 InkCut backend server running on http://localhost:${PORT}`);
   console.log(`📁 Downloads directory: ${DOWNLOADS_DIR}`);
+  console.log(`📁 Static files path: ${path.join(__dirname, '../dist')}`);
   console.log(`🔑 YouTube API: ${process.env.YOUTUBE_API_KEY ? 'Configured ✓' : 'Not configured ✗'}`);
   console.log('\nAvailable endpoints:');
   console.log(`  GET  /health - Health check`);
   console.log(`  GET  /api/video/info?videoId=xxx - Get video metadata`);
   console.log(`  GET  /api/search?q=query - Search YouTube videos`);
   console.log(`  POST /api/download - Download video segment`);
+});
+
+server.on('error', (e) => {
+  if (e.code === 'EADDRINUSE') {
+    console.error(`⚠️ Port ${PORT} is in use - Likely another instance is running`);
+  } else {
+    console.error('Server error:', e);
+  }
 });

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import SketchIcon from './SketchIcon';
+import API_CONFIG from '../config';
 
 interface VideoResult {
   id: string;
@@ -41,7 +42,7 @@ export const VideoSearch: React.FC<VideoSearchProps> = ({ onSelectVideo }) => {
     setHasSearched(true);
     
     try {
-      let url = `http://localhost:3001/api/search?q=${encodeURIComponent(query)}&maxResults=12`;
+      let url = `${API_CONFIG.BASE_URL}/api/search?q=${encodeURIComponent(query)}&maxResults=12`;
       if (pageToken) {
         url += `&pageToken=${pageToken}`;
       }

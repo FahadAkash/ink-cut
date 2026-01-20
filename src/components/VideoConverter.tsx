@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import SketchIcon from './SketchIcon';
+import API_CONFIG from '../config';
 
 declare global {
   interface Window {
@@ -62,19 +63,38 @@ export const VideoConverter: React.FC<VideoConverterProps> = () => {
 
   const selectOutputFolder = async () => {
     if (window.electron) {
+      // Desktop: Use Electron's native folder picker
       const path = await window.electron.selectFolder();
       if (path) {
         setOutputDir(path);
         localStorage.setItem('inkcut_output_dir', path);
       }
     } else {
-      alert('Folder selection is only available in the Desktop App');
+      // Web: Use File System Access API
+      try {
+        // @ts-ignore - showDirectoryPicker may not be in all TS definitions yet
+        const dirHandle = await window.showDirectoryPicker();
+        // On web, we can't get the full path for security, but we show the folder name
+        setOutputDir(dirHandle.name);
+        localStorage.setItem('inkcut_output_dir', dirHandle.name);
+      } catch (err) {
+        if ((err as Error).name !== 'AbortError') {
+          console.error('Folder select error:', err);
+          alert('⚠️ Folder selection is not supported in this browser.\n\nNote: On the web, downloads will use your browser\'s default download folder for security reasons.');
+        }
+      }
     }
   };
 
   const processQueue = async () => {
     setIsProcessing(true);
     
+    if (!window.electron) {
+      alert('⚠️ Video conversion is only available in the Desktop App.\nOn the web, we cannot access your local file paths for security reasons.');
+      setIsProcessing(false);
+      return;
+    }
+
     // Process files with max concurrency of 3
     const CONCURRENCY = 3;
     const queue = files.filter(f => f.status === 'pending');
@@ -94,7 +114,7 @@ export const VideoConverter: React.FC<VideoConverterProps> = () => {
 
           if (!inputPath) throw new Error('No file path found');
 
-          const response = await fetch('http://localhost:3001/api/convert', {
+          const response = await fetch(`${API_CONFIG.BASE_URL}/api/convert`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ inputPath, outputDir, format })
